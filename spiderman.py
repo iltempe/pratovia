@@ -4,31 +4,55 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 
 #scraping of ordinanze trasporti comune di Prato
-
 import csv
 from lxml import html
 import requests
 
-#anno
-anno='2017'
+#scrive un dataset per l'anno e i dati di cui si è fatto lo scraper
+def write_dataset(anno,header,rows):
+    with open("dati_mobilità_" + anno + ".csv", "w") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for row in rows:
+            writer.writerow(row)
+    return
 
-page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/')
-tree = html.fromstring(page.content)
+#anni
+year=['2015','2016','2017']
+separator = "-"
 
-num_list=tree.xpath('//*[@id="main"]/div[2]/strong[3]/text()')
-num_string = ''.join(num_list)
+for anno in year:
+    dove_all=[]
+    page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/')
+    tree = html.fromstring(page.content)
 
-page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/?limit=' + num_string)
-tree = html.fromstring(page.content)
+    #trovo il numero di delibere
+    num_list=tree.xpath('//*[@id="main"]/div[2]/strong[3]/text()')
+    num_string = ''.join(num_list)
 
-#scraping all data of the year
-stato=tree.xpath('//*[@id="main"]/table/tbody/tr/td[1]/img/@title')
-quando=tree.xpath('//*[@id="main"]/table/tbody/tr/td[2]/text()')
-num=tree.xpath('//*[@id="main"]/table/tbody/tr/td[3]/text()')
-tipo=tree.xpath('//*[@id="main"]/table/tbody/tr/td[4]/text()')
-dove=tree.xpath('//*[@id="main"]/table/tbody/tr/td[5]/img/@title')
-perche=tree.xpath('//*[@id="main"]/table/tbody/tr/td[6]/img/@title')
-oggetto = tree.xpath('//*[@id="main"]/table/tbody/tr/td[7]/a/text()')
-link = tree.xpath('//*[@id="main"]/table/tbody/tr/td[7]/a/@href')
+    #leggo l'html
+    page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/?limit=' + num_string)
+    #page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/?limit=1')
+    tree = html.fromstring(page.content)
 
-#print(oggetto)
+    #intervallo righe
+    interval=range(1,int(num_string)+1)
+
+    #scraping all data of the year
+    stato=tree.xpath('//*[@id="main"]/table/tbody/tr/td[1]/img/@title')
+    quando=tree.xpath('//*[@id="main"]/table/tbody/tr/td[2]/text()')
+    num=tree.xpath('//*[@id="main"]/table/tbody/tr/td[3]/text()')
+    tipo=tree.xpath('//*[@id="main"]/table/tbody/tr/td[4]/text()')
+    for i in interval:
+        dove=tree.xpath('//*[@id="main"]/table/tbody/tr[' + str(i) + ']/td[5]/img/@alt')
+        dove_all.append(separator.join(dove))
+    perche=tree.xpath('//*[@id="main"]/table/tbody/tr/td[6]/img/@title')
+    oggetto = tree.xpath('//*[@id="main"]/table/tbody/tr/td[7]/a/text()')
+    link = tree.xpath('//*[@id="main"]/table/tbody/tr/td[7]/a/@href')
+    print(anno + " data extracted...")
+    #scrivi file csv
+    header=['stato','data','numero','tipo','luogo','perchè','oggetto','link']
+    rows = zip(stato,quando,num,tipo,dove_all,perche,oggetto,link)
+    write_dataset(anno, header, rows)
+    print(anno + " data written...")
+
