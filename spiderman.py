@@ -7,6 +7,8 @@ sys.setdefaultencoding('utf8')
 import csv
 from lxml import html
 import requests
+from BeautifulSoup import BeautifulSoup
+import urllib
 
 #scrive un dataset per l'anno e i dati di cui si è fatto lo scraper
 def write_dataset(anno,header,rows):
@@ -17,8 +19,13 @@ def write_dataset(anno,header,rows):
             writer.writerow(row)
     return
 
-#anni
-year=['2015','2016','2017']
+#i dettagli dell'ordinanza necessitano di uno scrape con BeautifulSoup
+def scrape_ordinanza_details(link,anno):
+
+    return
+
+#anni da estrarre
+year=['2017']
 separator = "-"
 
 for anno in year:
@@ -48,8 +55,15 @@ for anno in year:
         dove_all.append(separator.join(dove))
     perche=tree.xpath('//*[@id="main"]/table/tbody/tr/td[6]/img/@title')
     oggetto = tree.xpath('//*[@id="main"]/table/tbody/tr/td[7]/a/text()')
+
+    #trasformare ../../archivio/2017/htm/3024.htm in http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/2017/htm/3024.htm
     link = tree.xpath('//*[@id="main"]/table/tbody/tr/td[7]/a/@href')
+    link = [s.replace('../..', 'http://www.comune.prato.it/servizicomunali/ordinanze/trasporti') for s in link]
+
+    #pippo=[scrape_ordinanza_details(s,anno) for s in link]
+
     print(anno + " data extracted...")
+
     #scrivi file csv
     header=['stato','data','numero','tipo','luogo','perchè','oggetto','link']
     rows = zip(stato,quando,num,tipo,dove_all,perche,oggetto,link)
