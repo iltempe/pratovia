@@ -1,7 +1,7 @@
 # encoding=utf8
 import sys
 reload(sys)
-sys.setdefaultencoding('utf8')
+sys.setdefaultencoding('utf-8')
 
 #scraping of ordinanze trasporti comune di Prato
 import csv
@@ -9,14 +9,8 @@ from lxml import html
 import requests
 from BeautifulSoup import BeautifulSoup
 import urllib
+import re
 
-#verifica se un elemento esiste o no
-def hasXpath(xpath):
-    try:
-        self.browser.find_element_by_xpath(xpath)
-        return True
-    except:
-        return False
 
 #scrive un dataset per l'anno e i dati di cui si è fatto lo scraper
 def write_dataset(anno,header,rows):
@@ -29,17 +23,34 @@ def write_dataset(anno,header,rows):
 
 #i dettagli dell'ordinanza necessitano di uno scrape con BeautifulSoup
 def scrape_ordinanza_details(link,anno):
+    strade=[]
+
     page = requests.get(link)
     tree = html.fromstring(page.content)
 
+    #estrai limitazioni
     limitazioni=tree.xpath('//*[@id="main"]/ul[1]/li/text()')
     if(limitazioni == [] or limitazioni == ['\n        ', '\n      ']):
         limitazioni=tree.xpath('//*[@id="main"]/p[5]/text()')
+    limitazioni=[l.encode('ascii', 'ignore') for l in limitazioni]
 
+    #estrai strade
     strade=tree.xpath('//*[@id="main"]/ul[2]/li/text()')
     if(strade == [] or strade == ['\n        ', '\n      ']):
         strade=tree.xpath('//*[@id="main"]/p[6]/text()')
 
+    strade=[re.sub('(\\(.*\\))', '', s) for s in strade]
+    strade=[s.replace("\n", "") for s in strade]
+    strade=[s.strip() for s in strade]
+
+    #estrai link testo ordinanza
+    testo_url=tree.xpath('//*[@id="main"]/p[4]/strong/a/@href')
+    testo_url=str1 = ''.join(testo_url)
+    testo_url='http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/htm/' + testo_url
+
+
+
+    print(testo_url)
     print(limitazioni)
     print(strade)
     return
@@ -58,9 +69,9 @@ for anno in year:
     num_string = ''.join(num_list)
 
     #leggo l'html
-    #page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/?limit=' + num_string)
-    #per debug prima ordinanza soltanto
-    page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/?limit=2')
+    page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/?limit=' + num_string)
+    #per debug prime due ordinanze soltanto
+    #page = requests.get('http://www.comune.prato.it/servizicomunali/ordinanze/trasporti/archivio/' + anno + '/?limit=2')
     tree = html.fromstring(page.content)
 
     #intervallo righe
@@ -81,7 +92,8 @@ for anno in year:
     link = tree.xpath('//*[@id="main"]/table/tbody/tr/td[7]/a/@href')
     link = [s.replace('../..', 'http://www.comune.prato.it/servizicomunali/ordinanze/trasporti') for s in link]
 
-    pippo=[scrape_ordinanza_details(s,anno) for s in link]
+    #to be completed...dettagli
+    #pippo=[scrape_ordinanza_details(s,anno) for s in link]
 
     print(anno + " data extracted...")
 
